@@ -1,0 +1,182 @@
+---
+title: "Try it Yourself Exercises for data.table R package"
+format: html
+editor: visual
+---
+
+In this lab, we will be working with data on homes sold in Ames, Iowa, including their attributes and sale prices. This dataset was produced by the Ames, Iowa Assessor’s Office and made accessible by Dean De Cock, Truman State University. To learn more about the data and download it, visit [the CMU data repository](https://cmustatistics.github.io/data-repository/money/ames-housing.html).
+
+```{r, message=F, warning=F}
+library(data.table)
+library(tidyverse)
+library(dtplyr)
+homes <- fread("ames-housing.csv")
+```
+
+## Recalling the 6 main verbs of data.table
+
+We will start by recalling the data.table syntax of the 6 main verbs. Run the following code and write a brief description of what each line of code is doing.
+
+```{r}
+homes_sub <- homes[,.(Year.Built, Mo.Sold, Yr.Sold, SalePrice)]
+```
+
+**ANSWER HERE:** This keeps only the `Year.Built`, `Mo.Sold`, `Yr.Sold`, and `SalePrice` columns, saving this to `homes_sub`.
+
+```{r}
+homes_sub[, ym_sold := as.Date(paste(Yr.Sold, Mo.Sold, "01", sep = "-"), "%Y-%m-%d")] 
+```
+
+**ANSWER HERE:** This creates a new column in `homes_sub` called `ym_sold`, which combines the year and month of each house sale.
+
+```{r, eval=F}
+homes[Full.Bath == 4]
+```
+
+**ANSWER HERE:** This filters the `homes` dataset to only contain homes with 4 full bathrooms.
+
+```{r, eval=F}
+homes_sub[order(Year.Built)]
+```
+
+**ANSWER HERE:** This orders the `homes_sub` dataset from homes built most long ago to most recently.
+
+```{r, eval=F}
+homes_sub[, .N, by=Yr.Sold]
+```
+
+**ANSWER HERE:** This gets the total number of homes sold each year.
+
+## Write code to for a prompt
+
+In this section we are interested in investigating the sale price of homes during the Great Recession that occurred from December 2007 to June 2009. For each prompt, write the corresponding code.
+
+**Mutate** a variable called `sold_ym` to the `homes` dataset that gives the month and year that the home was sold. *Hint: see previous problem*.
+
+```{r}
+homes[, ym_sold := as.Date(paste(Yr.Sold, Mo.Sold, "01", sep = "-"), "%Y-%m-%d")]
+```
+
+**Select** `ym_sold` and `SalePrice` and save this to new dataset called `sales`.
+
+```{r}
+sales <- homes[, .(ym_sold, SalePrice)]
+```
+
+**Filter** `sales` to only include homes sold in the recession (December 2007-June 2009). Resave this dataset as `sales`.
+
+```{r}
+sales <- sales[ym_sold >= "2007-12-01" & ym_sold <= "2009-06-01"]
+```
+
+**Group_by** the year/month the home was sold and **summarize** the average selling price in that month. Resave this dataset as `sales`.
+
+```{r}
+sales <- sales[, .(avg_price = mean(SalePrice)), by = ym_sold]
+```
+
+**Arrange** the dataset by date.
+
+```{r, eval=F}
+sales[order(ym_sold)]
+```
+
+### Adding pipes
+
+In the prompts above, we iteratively overwrote the `sales` dataset each step. This can get clunky---instead we could pipe together the above prompts. Give it a try!
+
+```{r, eval=F}
+homes[, .(ym_sold, SalePrice)][
+  ym_sold >= "2007-12-01" & ym_sold <= "2009-06-01"][
+    , .(avg_price = mean(SalePrice)), by = ym_sold][
+      order(ym_sold)]
+```
+
+## Combine steps to answer a question
+
+Now that we have a gotten some practice with the 6 main verbs, your challenge is to utilize them to answer the following questions.
+
+1.  Start by finding the top 3 `Neighborhood`s with the most homes sold. For these neighborhoods, find their average `Year.Built` and `SalePrice` and the arrange the end dataset from oldest to most recent average year built.
+
+```{r}
+homes[,.N, Neighborhood][
+  order(-N)[1:3]]
+
+homes[Neighborhood %in% c("NAmes", "CollgCr", "OldTown")][
+  , .(Neighborhood, Year.Built, SalePrice)][
+    ,.(avg_year= round(mean(Year.Built),0), avg_price = mean(SalePrice)), by = Neighborhood][
+      order(avg_year)]
+```
+
+2.  Are homes with larger garages (garages that fit 3 or more cars) typically built on larger lots (`Lot.Area`)? How does the average price for these homes compare to homes with 2 or fewer car garages?
+
+```{r}
+homes[,large_garage := case_when(Garage.Cars >= 3 ~ "yes", TRUE ~ "no")][
+  , .(average_lot = mean(Lot.Area), average_price = mean(SalePrice), .N), by = large_garage]
+```
+
+About 13% of homes have a large garage. Yep, the average lot size is 12,946 square feet for homes with 3+ car garages compared to 9,717 square feet for those with 0-2 car garages. These large garage homes also have almost double the average sale price. It would be interesting to look into what other features these homes might have that may contribute to this price difference!
+
+## Bonus Exercises
+
+### Joining
+
+We will now get some practice with joining datasets together. Run the following code chunk in order to create the dataset `expensive`, which gives the 5 neighborhoods with the most expensive average selling price. We also have `stores`, which says how many grocery stores are in each neighborhood (this is made up).
+
+```{r}
+expensive <- homes[,.(avg_selling = mean(SalePrice), N= .N), by=Neighborhood][
+  N>10][
+    order(-avg_selling)[1:5]]
+stores <- rowwiseDT(Neighborhood =, Grocery =, 
+                    "NoRidge", 3,
+                    "StoneBr", 1,
+                    "NridgHt", 3,
+                    "Veenker", 2,
+                    "Timber", 0)
+```
+
+Write code to join the two datasets so that the number of grocery stores is a column in the `expensive` dataset.
+
+```{r, eval=F}
+expensive[stores, on= .(Neighborhood)]
+```
+
+What if we wanted to get all the homes sold from those top 5 most expensive neighborhood? Instead of typing out each of these neighborhoods in a filter statement, we can use a join. Write code to do this.
+
+```{r, eval=F}
+homes[expensive, on= .(Neighborhood)]
+```
+
+If you want to learn more about joins, check out [this great vignette](https://cran.r-project.org/web/packages/data.table/vignettes/datatable-joins.html)!
+
+### Visualization by a grouping variable
+
+Let's visualize the relationship between above ground living area in square feet (`Gr.Liv.Area`) and `SalePrice` for three neighborhoods: NAmes, CollgCr, and OldTown. Fill in the missing parts of the code.
+
+```{r, message=F, warning=F, out.width='50%'}
+homes[Neighborhood %in% c("NAmes", "CollgCr", "OldTown")][, print(
+  ggplot(.SD, 
+    aes(x=Gr.Liv.Area, y=SalePrice))+
+    geom_point(alpha=0.5)+
+    theme_classic()+
+    ggtitle(paste(Neighborhood[1]))), by=Neighborhood]
+```
+
+### dtyplr
+
+Finally, let's get a little bit of practice using the `dtplyr` package. Suppose we know how to answer the Great Recession question with dplyr. Fill in the missing pieces to run this code.
+
+```{r, eval=F}
+library(dtplyr)
+
+homes2 <- lazy_dt(homes)
+
+homes2 |>
+  mutate(ym_sold := as.Date(paste(Yr.Sold, Mo.Sold, "01", sep = "-"), "%Y-%m-%d")) |>
+  select(ym_sold, SalePrice) |>
+  filter(ym_sold >= "2007-12-01" & ym_sold <= "2009-06-01") |>
+  group_by(ym_sold) |>
+  summarize(avg_price = mean(SalePrice)) |>
+  arrange(ym_sold) |>
+  as_tibble()
+```

@@ -1,0 +1,484 @@
+---
+title: "Data wrangling with R's `data.table` package"
+author: "<br>Sara Colando & Erin Franke<br><br>Department of Statistics & Data Science<br>Carnegie Mellon University"
+# footer:  "[36-SURE.github.io/2024](https://36-sure.github.io/2024)"
+format:
+  revealjs:
+    theme: theme.scss
+    auto-stretch: false
+    chalkboard: true
+    smaller: true
+    slide-number: c/t
+    code-line-numbers: false
+    linestretch: 1.25
+    html-math-method:
+      method: mathjax
+      url: "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+---
+
+```{r}
+#| include: false
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  fig.align = "center"
+)
+set.seed(101)
+```
+
+```{r}
+#| include: false
+#| message: false
+#| warning: false
+library(data.table)
+library(tidyverse)
+library(gt)
+library(broom)
+library(gtsummary)
+house_prices <- fread("ames-housing.csv") 
+```
+
+# Motivation {data-background-image="images/datatable-logo.png" data-background-size="20%" data-background-position="65% 50%"}
+
+## What is `data.table`?
+
+::::: columns
+::: {.column width="50%" style="text-align: left;"}
+-   A versatile R package that is a high performance version of base R's `data.frame`.[^1]
+
+-   Benefits include:
+
+    -   Computational efficiency
+
+    -   Concise syntax
+
+    -   No dependencies
+
+    -   Tested against old versions of R
+
+-   Uses: data wrangling, reading/writing files, handling large data, and much more!
+:::
+
+::: {.column width="50%" style="text-align: left;"}
+```{r}
+#| out-width: "70%"
+#| echo: false
+knitr::include_graphics("images/datatable.png")
+```
+:::
+:::::
+
+[^1]: [data.table reference page](https://rdatatable.gitlab.io/data.table/reference/data.table.html)
+
+# Main verbs of data wrangling
+
+## The six main verbs
+
+1.  **Select:** extract columns in data
+
+2.  **Mutate:** create new variables (columns) in data
+
+3.  **Filter:** extract rows in data that meet certain logical conditions
+
+4.  **Arrange:** sort rows (observations) by variables
+
+5.  **Group by:** group the data based on variable(s) in data
+
+6.  **Summarize:** create summary statistics, usually on grouped data
+
+## `data.table` syntax
+
+The six main verbs all follow a **three part** syntax:
+
+```{r}
+#| out-width: "80%"
+#| echo: false
+knitr::include_graphics("images/general_syntax.png")
+```
+
+## Example data
+
+::::: columns
+::: {.column width="50%" style="text-align: left;"}
+-   `pets_dt` is collected on students who have one pet
+
+    -   `pet`: animal student has
+
+    -   `n_classes`: number of classes the student is in
+
+    -   `hours_hw`: hours of homework the student has
+
+```{r}
+pets_dt <- rowwiseDT(pet =, n_classes=, hours_hw=, 
+                    "cat", 3, 18, 
+                    "dog", 4, 24, 
+                    "fish", 2, 10, 
+                    "dog", 3, 12, 
+                    "dog", 1, 8, 
+                    "cat", 1, 3, 
+                    "fish", 4, 16, 
+                    "fish", 1, 6)
+```
+:::
+
+::: {.column width="50%" style="text-align: left;"}
+```{r}
+#| out-width: "70%"
+#| echo: false
+knitr::include_graphics("images/data.png")
+```
+:::
+:::::
+
+## Selecting columns
+
+We can `select` columns to keep in our dataset
+
+```{r}
+#| out-width: "40%"
+#| echo: false
+knitr::include_graphics("images/select.png")
+```
+
+## Mutating variables
+
+We can *add* (`mutate`) variables to the dataset, keeping the same number of rows as before
+
+```{r}
+#| out-width: "50%"
+#| echo: false
+knitr::include_graphics("images/mutate.png")
+```
+
+## Filtering rows
+
+We can `filter` for particular type of row based on a logical statement
+
+```{r}
+#| out-width: "50%"
+#| echo: false
+knitr::include_graphics("images/filter.png")
+```
+
+```{r, include=F, eval=F}
+pets_dt[pet != "cat"]
+```
+
+## Arranging rows
+
+We can `arrange` the dataset by a particular variable(s)
+
+```{r}
+#| out-width: "40%"
+#| echo: false
+knitr::include_graphics("images/arrange.png")
+```
+
+```{r, include= F, eval=F}
+pets_dt[order(pet),]
+pets_dt[order(pet, -n_classes, decreasing = T)]
+```
+
+## Grouping by and summarizing
+
+We can create summary statistics (`summarize`) by particular groups (`group_by`)
+
+::::: columns
+::: {.column width="50%" style="text-align: left;"}
+```{r}
+#| out-width: "80%"
+#| echo: false
+knitr::include_graphics("images/group_by.png")
+```
+:::
+
+::: {.column width="50%" style="text-align: left;"}
+```{r}
+#| out-width: "100%"
+#| echo: false
+knitr::include_graphics("images/summarize.png")
+```
+:::
+:::::
+
+```{r, include=F, eval=F}
+pets_dt[, .(avg_hours_hw=mean(hours_hw)), by=pet]
+```
+
+## Let's poll!
+
+```{r}
+#| out-width: "40%"
+#| echo: false
+knitr::include_graphics("images/slido-QR.png")
+```
+
+<p style="text-align: center;">
+[Slido Clicker Question](https://app.sli.do/event/6spmFknwZtvWQjaZMQbqNc)
+</p>
+
+## Joining datasets
+
+We might also want to `join` two datasets, meaning we combine them based on the information in each respective one.
+
+In `data.table`, joins are supported by the base syntax:
+
+```{r}
+#| echo: false
+#| out-width: "80%"
+knitr::include_graphics("images/general-join-syntax.png")
+```
+
+*Note that joins are <u>right joins</u> by default in `data.table`!*
+
+
+## Equi joins
+
+**Equi joins:** find common elements between the two datasets to combine
+
+*Inner Join Example:*
+
+```{r}
+#| echo: false
+pets_dt<- rowwiseDT(pet =, n_classes=, hours_hw=, 
+                    "cat", 3, 18, 
+                    "dog", 4, 24, 
+                    "fish", 2, 10, 
+                    "dog", 3, 12, 
+                    "dog", 1, 8, 
+                    "cat", 1, 3, 
+                    "fish", 4, 16, 
+                    "fish", 1, 6)
+
+sounds_dt <- data.table(
+  pet = c("cat", "dog", "fish"),
+  pet_sound = c("meow", "bark", "blub")
+)
+```
+
+```{r}
+#| echo: false
+#| out-width: "85%"
+knitr::include_graphics("images/equi-join2.png")
+```
+
+## Advanced join types
+
+-   **Non-Equi Joins:** match rows based on comparison operators other than strict equality
+
+    - for example: $>$, $<$, $\geq$, or $\leq$ operators
+
+-   **Overlapping Joins:** match rows based on overlapping ranges between elements
+
+    - see the [`foverlaps()`](https://rdrr.io/cran/data.table/man/foverlaps.html) function
+
+-   **Rolling Joins:** match rows based on the nearest value in a sorted column
+
+    - useful for time series data or for imputing missing values with nearest available data 
+
+## Piping statements together
+
+What if we wanted to pair multiple of the six main verbs together? For example, filter `pets_dt` to remove the cats and then arrange by `hours_hw`?
+
+-   We could save the filtered dataset to `no_cats_dt` and then order that.
+-   We could also pipe statements together!
+
+```{r}
+#| echo: false
+#| out-width: "30%"
+knitr::include_graphics("images/pipe.png")
+```
+
+## Three equivalent ways to pipe
+
+```{r}
+#| out-width: "60%"
+#| echo: false
+knitr::include_graphics("images/pipe3.png")
+```
+
+# Reading and writing files
+
+## `fread()` and `fwrite()`
+
+To (a) read a file into R or (b) save a file to home directory, `fread()` and `fwrite()` are efficient and support several file types.
+
+```{r}
+pets_dt <- fread("pets_dt.csv") 
+```
+
+Supports:
+
+-   .csv, .tsv
+
+-   Other delimited files (semicolon, colon, pipe)
+
+-   Compressed files with .gz, .bz2 extensions
+
+## Nice arguments of `fread()`
+
+-   `nrow`: number of rows to read in
+
+```{r}
+fread("pets_dt.csv", nrow = 3) 
+```
+
+-   `skip`: row number or string match to start reading from
+
+```{r}
+fread("pets_dt.csv", skip = "fish") 
+```
+
+## Nice arguments of `fread()` (cont)
+
+-   `select`: columns to keep
+
+```{r}
+fread("pets_dt.csv", select = "pet") 
+```
+
+-   `drop`: columns to remove
+
+```{r}
+fread("pets_dt.csv", drop = c("pet", "n_classes")) 
+```
+
+# Bonus features
+
+## Rowwise `data.table` object creation
+
+-   Convenient and readable for creating small datasets
+
+    -   For instance, creating toy examples or summary tables
+
+```{r}
+pets_dt <- rowwiseDT(pet =, n_classes=, hours_hw=, 
+                    "cat", 3, 18, 
+                    "dog", 4, 24, 
+                    "fish", 2, 10)
+
+gt(pets_dt)
+```
+
+## Visualizing by a grouping variable
+
+Let's say we are investigating the relationship between **lot area** and **sale price** and we want to see how it varies by driveway pavement.
+
+```{r, message=F, warning=F, eval=F}
+house_prices[, print(
+  ggplot(.SD, aes(x=Lot.Area, y=SalePrice))+
+    geom_point(alpha=0.5)+
+    theme_classic()+
+    ggtitle(paste("Paved.Drive:", Paved.Drive[1]))), by=.(Paved.Drive)]
+```
+
+```{r}
+#| out-width: "50%"
+#| echo: false
+knitr::include_graphics("images/plots.png")
+```
+
+## Modeling by a grouping variable
+
+With `data.table` we can also create a distinct model for each group. For example, we can fit a linear model for sale price of homes in Iowa (`SalePrice`) for each neighborhood in the dataset:
+
+```{r}
+grouped_models <- house_prices[, .(mods = list(
+  lm(SalePrice ~ Lot.Area + Bedroom.AbvGr + Full.Bath + Year.Built*Yr.Sold, data = .SD))),
+  by = Neighborhood ]
+```
+
+We can then cross-compare the coefficient estimates and p-values for the covariates in our model to see how the differ between neighborhoods:
+
+::::: columns
+::: {.column width="50%" style="text-align: left;"}
+**Old Town, Ames, Iowa:**
+
+```{r}
+#| echo: false
+OldTown_lm_summary <- summary(grouped_models$mods[[15]])
+```
+
+```{r}
+#| echo: false
+tbl_regression(OldTown_lm_summary)
+```
+:::
+
+::: {.column width="50%" style="text-align: left;"}
+**Northridge Heights, Ames, Iowa:**
+
+```{r}
+#| echo: false
+NridgHt_lm_summary <- summary(grouped_models$mods[[8]])
+```
+
+```{r}
+#| echo: false
+tbl_regression(NridgHt_lm_summary)
+```
+:::
+:::::
+
+# Connection to `tidyverse`
+
+## Weighing the options
+
+-   Both `data.table` and `tidyverse` are great tools for wrangling data. Luckily, we are not confined to just one of them![^3]
+-   It all comes down to personal preference:
+    -   Comfort with syntax
+    -   Brevity of syntax
+    -   Consistency with collaborators
+    -   Computational efficiency [^4]
+
+[^3]: [Two Roads Diverged Opinion Piece (Kelly Bodwin)](https://rdatatable-community.github.io/The-Raft/posts/2024-05-20-kelly_bodwin/)
+
+[^4]: [Speed Comparisons](https://markfairbanks.github.io/tidytable/articles/speed_comparisons.html)
+
+```{r}
+#| out-width: "40%"
+#| echo: false
+knitr::include_graphics("images/boxing.png")
+```
+
+## `dtplyr` {data-background-image="images/approval-logo.png" data-background-size="20%" data-background-position="90% 90%"}
+
+Perhaps you have some experience with data wrangling in the `tidyverse`, but you need the efficiency of `data.table`.
+
+The `dtplyr` allows for `data.table`-like efficiency while still writing code in tidyverse, with a few small modifications.[^5]
+
+[^5]: [dtplyr reference page](https://dtplyr.tidyverse.org)
+
+```{r, results='hide'}
+library(dtplyr)
+
+house_prices2 <- lazy_dt(house_prices) # extra step needed to use dtplyr
+
+house_prices2 %>%
+  filter(Lot.Area >= 10000) %>%
+  as_tibble() # extra step needed to use dtplyr
+```
+
+## So, what do we mean when we say `data.table` is computationally efficient?
+:::{.slide}
+
+<div style="display: flex; justify-content: center; align-items: center; height: 50vh;">
+```{r}
+#| out-width: "75%"
+#| echo: false
+knitr::include_graphics("images/efficiency-summary.png")
+```
+
+</div>
+:::
+
+## Interested in learning more about computational effiency?
+
+-   [This](https://stackoverflow.com/questions/21435339/data-table-vs-dplyr-can-one-do-something-well-the-other-cant-or-does-poorly) Stack Overflow thread explains a bit about memory usage
+
+-   Visit [this vignette](https://cran.r-project.org/web/packages/data.table/vignettes/datatable-keys-fast-subset.html) to learn about keys and [this vignette](https://cran.r-project.org/web/packages/data.table/vignettes/datatable-secondary-indices-and-auto-indexing.html) to learn about indexing.
+
+    -   These features are super helpful when working with large data!
+
+# Thanks! Questions?
