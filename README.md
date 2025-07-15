@@ -1,2 +1,3 @@
-# datatable
-Materials for our USCOTS Presentation: Teaching Data Cleaning and Wrangling with R's data.table Package
+# Teaching Data Cleaning and Wrangling with R's data.table Package
+
+This repository contains materials for teaching data wrangling with R's `data.table` package to introductory statistics students. We primarily focus on the syntax behind the six main verbs (filter, select, mutate, arrange, group_by, summarize). We recommmend starting with our lecture slides, which contain a few interactive questions along the way to gauge student learning. Students can then have the opportunity to practice and apply what they learned from lecture to real data in our [lab activity](https://github.com/efranke22/datatable_final_materials/blob/main/lab.qmd). Lab solutions are [here](https://github.com/efranke22/datatable_final_materials/blob/main/lab_solutions.qmd). Please reach out to Erin Franke (efranke@andrew.cmu.edu) and/or Sara Colando (scolando@andrew.cmu.edu) with any questions!
